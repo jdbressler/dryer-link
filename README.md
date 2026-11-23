@@ -118,10 +118,12 @@ esphome upload dryer-link-test.yaml --device dryer-link-xxxxxx.local
 1. Raise `version:` in `dryer-link.yaml` and push to `main`.
 2. Try that firmware on a module of your own.
 3. On GitHub: Actions, "Build", "Run workflow", type the version, run.
+4. When the run reaches "publish" it waits: open it, "Review deployments", tick `github-pages`, approve.
 
 The workflow runs the tests, builds the firmware, puts it at the update address
 (`https://jdbressler.github.io/dryer-link/firmware/manifest.json`, GitHub Pages), fetches it back the way a module
-does, and makes a GitHub release. Modules check the address shortly after start-up and every 4 hours, and
+does, and makes a GitHub release. The approval in step 4 is there because a push alone must never be able to
+publish: the repository's `github-pages` environment only deploys after the account owner approves. Modules check the address shortly after start-up and every 4 hours, and
 install a version that differs from their own when the dryer is quiet. A release that fails to install is retried
 after 5 minutes, then 20, then 80, and so on up to once a day.
 

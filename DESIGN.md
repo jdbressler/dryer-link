@@ -129,7 +129,10 @@ What is protected, and by what:
   the hotspot starts; the log is reachable only through the status page (behind that password) and Home Assistant.
 - **Updates are not signed.** Trust is the TLS certificate of the update address plus the checksum in the manifest
   fetched from the same address. Whoever controls this repository's GitHub Pages controls every module. Mitigation:
-  two-factor sign-in on the GitHub account; publishing needs a deliberate manual run of the workflow.
+  two-factor sign-in on the GitHub account; publishing needs a deliberate manual run of the workflow; and the
+  `github-pages` environment deploys only from `main` and only after the account owner approves the run. The last
+  rule matters because code is pushed with a deploy key kept on a computer: a stolen key can change the code and
+  the workflow, but cannot publish.
 - **Adoption window.** For 30 minutes after a start, anyone on the home network who speaks ESPHome's API can adopt
   an unadopted module. That is ESPHome's provisioning model; the window is the protection.
 - The test build is open on purpose (see README). It must not be installed for a customer.
