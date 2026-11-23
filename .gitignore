@@ -1,0 +1,11 @@
+# Built firmware and ESPHome's working files
+.esphome/
+tests/host/build/
+__pycache__/
+*.pyc
+node_modules/
+.DS_Store
+
+# Never in the repository: each module's setup password (flash.sh writes its label here), and anyone's secrets
+labels/
+secrets.yaml

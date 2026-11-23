@@ -1,0 +1,28 @@
+# Dryer Link, test build. Same firmware as dryer-link.yaml, with these differences, none of which may go to a
+# customer:
+#   - ESPHome network upload with no password: anyone on the same Wi-Fi could replace the firmware.
+#     It is here so a module on the dryer can be updated from a computer while the firmware is being developed.
+#   - The walkthrough and its API also answer on the home network, and the status page asks for no login, so the
+#     module can be inspected from a computer.
+#   - It does not update itself. The update check still runs, and "Install" can be pressed by hand.
+#   - Debug-level logging.
+packages:
+  base: !include dryer-link.yaml
+
+substitutions:
+  version: "0.0.0-test"                   # never equal to a release, so the update check always offers the release
+
+esphome:
+  comment: Dryer Link ${version} TEST BUILD (open network upload) on OnionStraws Rev 2.2 mod1
+  build_path: build/dryer-link-test       # inside .esphome/, kept apart from dryer-link.yaml's own build
+
+dryer_link:
+  setup_on_network: true
+  status_page_login: false
+  auto_update: false
+
+ota:
+  - platform: esphome
+
+logger:
+  level: DEBUG

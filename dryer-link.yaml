@@ -1,0 +1,499 @@
+# Dryer Link: a GE dryer -> Home Assistant, for dryers we have not seen before.
+# Board: OnionStraws Rev 2.2 "mod1" (mulcmu design, ESP32-C3-WROOM-02, powered from the dryer's RJ45 port).
+#
+# This file contains no secrets and needs no secrets.yaml: every module gets the same firmware.
+#   - First power-up: the module opens its own Wi-Fi network, named like the module ("dryer-link-xxxxxx").
+#     Joining it with a phone opens the setup walkthrough (components/dryer_link/setup.html).
+#   - The password of that network is different on every module. flash.sh makes it up, writes it into a small
+#     flash partition of its own and prints the module's label. It is in no firmware file and no update touches
+#     it. A module flashed some other way has no password and an open hotspot.
+#   - The walkthrough finds the dryer on either of GE's two buses, learns which data points this dryer has,
+#     runs two optional hands-on checks, and joins the home Wi-Fi last.
+#   - Entities for things this dryer does not have are hidden. No start command is ever offered.
+#   - Home Assistant assigns its own encryption key when it adopts the module.
+#   - Updates: the module checks this project's release address over HTTPS and installs a different version by
+#     itself when the dryer is not running. Nothing can push firmware to it over the network.
+#   - Setup window: 30 minutes after power-up. If the module has not been set up by then, the hotspot closes
+#     until the module is unplugged and plugged back in.
+#   - Full reset: unplug and replug the module 5 times, each time within 10 seconds of the last.
+#
+# Built and compile-tested with ESPHome 2026.10.2. See DESIGN.md for what is and is not tested on a dryer.
+#
+# LEDs: green = on Wi-Fi, yellow = dryer answering on the bus, red = unused.
+substitutions:
+  version: "0.1.0"             # a release is this version, tagged "v" + this, built by .github/workflows
+  # Where modules look for updates. Served by GitHub Pages from this repository, written by the release workflow.
+  update_manifest: https://jdbressler.github.io/dryer-link/firmware/manifest.json
+
+esphome:
+  name: dryer-link
+  friendly_name: Dryer Link
+  name_add_mac_suffix: true
+  comment: Dryer Link ${version} on OnionStraws Rev 2.2 mod1
+  project:                     # the version the update check compares with the one on offer
+    name: dryer-link.module
+    version: ${version}
+  on_boot:
+    priority: 600
+    then:
+      - output.turn_off: led_red
+      - output.turn_off: led_yellow
+
+esp32:
+  board: esp32-c3-devkitc-02
+  variant: esp32c3
+  flash_size: 4MB
+  flash_mode: dio
+  framework:
+    type: esp-idf
+    advanced:
+      # Updates are fetched over HTTPS from an address this project does not run (GitHub Pages). Trust every
+      # certificate authority browsers trust, not only the most common ones, so that a change of authority there
+      # cannot cut modules off from their updates.
+      use_full_certificate_bundle: true
+
+# UART0 (GPIO20/21) carries the new bus and is also the J2 programming header, so nothing is logged on the wire.
+logger:
+  baud_rate: 0
+  level: INFO
+
+# No key here: Home Assistant sets one the first time it adopts the module.
+api:
+  reboot_timeout: 0s
+  encryption:
+
+provisioning:
+  timeout: 30min
+
+factory_reset:
+  resets_required: 5
+  max_delay: 10s
+
+wifi:
+  # No network and no password in this file. The hotspot is named after the module. Its password is the module's
+  # own, put in place at start-up from the module's label partition (dryer_link.cpp, setup()); a module without
+  # one has an open hotspot. The hotspot exists only until the module is on Wi-Fi, and never for longer than the
+  # setup window above.
+  ap: {}
+  on_connect:
+    - output.turn_on: led_green
+  on_disconnect:
+    - output.turn_off: led_green
+
+captive_portal:
+
+# The status page for homes without Home Assistant. Firmware upload through it is off.
+# The login below only switches the feature on. At start-up the module replaces it with user "admin" and its own
+# label password, or switches the login off if it has no label password (see dryer_link.cpp, setup()).
+web_server:
+  port: 80
+  version: 3
+  local: true
+  ota: false
+  auth:
+    type: digest
+    username: admin
+    password: replaced-at-start-up
+
+# Updates are fetched by the module itself, over HTTPS with the certificate checked, and verified against the
+# checksum in the manifest. If a new version fails to start, the bootloader goes back to the previous one.
+http_request:
+  verify_ssl: true
+  timeout: 20s
+
+ota:
+  - platform: http_request
+
+update:
+  - platform: http_request
+    id: firmware_update
+    name: Firmware
+    source: ${update_manifest}
+    update_interval: 4h
+
+external_components:
+  - source:
+      type: local
+      path: components
+
+uart:
+  - id: uart_classic        # GEA2: one wire, RJ45 pin 7. This board's buffers do not invert, so both pins are.
+    tx_pin:
+      number: GPIO5
+      inverted: true
+    rx_pin:
+      number: GPIO10
+      inverted: true
+    baud_rate: 19200
+  - id: uart_new            # GEA3: two wires. Pins as in the board designer's own GEA3 example. Untested here.
+    tx_pin: GPIO21
+    rx_pin: GPIO20
+    baud_rate: 230400
+
+# The hub is started by dryer_link, which picks the UART and the language at run time.
+gea:
+  id: gea_hub
+  uart_id: uart_classic
+  protocol: gea2
+  src_address: 0xBB
+  poll_interval: 5s
+  poll_overrides:
+    - erd: 0x2000           # machine state
+      interval: 2s
+    - erd: 0x2012           # door
+      interval: 2s
+    - erd: 0x0001           # model: it does not change
+      interval: 10min
+    - erd: 0x0002           # serial number
+      interval: 10min
+
+# What a dryer may have. "label" is what the setup page calls it. When a dryer does not answer for a data point,
+# the entities listed with it are hidden and it is not polled.
+dryer_link:
+  id: dl_core
+  gea_id: gea_hub
+  classic_uart: uart_classic
+  new_uart: uart_new
+  version: ${version}
+  update_id: firmware_update   # install a different version by itself, when the dryer is not running
+  features:
+    - erd: 0x2000
+      label: What the dryer is doing
+      entities: [dl_state]
+    - erd: 0x2001
+      label: Stage of the cycle
+      entities: [dl_phase]
+    - erd: 0x2007
+      label: Time remaining
+      entities: [dl_remaining]
+    - erd: 0x200A
+      label: Selected cycle
+      entities: [dl_cycle]
+    - erd: 0x201C
+      label: Sensor or timed dry
+      entities: [dl_cycle_type]
+    - erd: 0x204D
+      label: Dryness level
+      entities: [dl_dryness]
+    - erd: 0x2050
+      label: Heat level
+      entities: [dl_heat]
+    - erd: 0x2012
+      label: Door open or closed
+      entities: [dl_door]
+    - erd: 0x2002
+      label: Cycle finished
+      entities: [dl_complete]
+    - erd: 0x2010
+      label: Delay start
+      entities: [dl_delay]
+    - erd: 0x2003
+      label: Number of cycles run
+      entities: [dl_cycles]
+    - erd: 0x2047
+      label: Damp alert
+      entities: [dl_damp]
+    - erd: 0x206F
+      label: Blocked vent warning
+      entities: [dl_vent]
+    - erd: 0x0001
+      label: Model and serial number
+      entities: [dl_model]
+    - erd: 0x0002
+      label: Model and serial number
+      entities: [dl_serial]
+    - erd: 0x2040
+      label: Stop
+      control: true
+      entities: [dl_stop]
+    - erd: 0x201B
+      label: Extended Tumble
+      control: true
+      write_check: 0x201B      # must also accept a write: its current value is written back, unchanged
+      entities: [dl_extended_tumble]
+    - erd: 0x2053              # newer dryers: the same option under its newer code, written through 0x2051
+      label: Extended Tumble
+      control: true
+      write_check: 0x2051
+      entities: [dl_wrinkle_care]
+
+output:
+  - platform: gpio          # red LED, lit when the pin is low; unused, kept off
+    id: led_red
+    pin:
+      number: GPIO2
+      inverted: true
+      ignore_strapping_warning: true
+  - platform: gpio          # green LED: on Wi-Fi
+    id: led_green
+    pin: GPIO3
+  - platform: gpio          # yellow LED: dryer is answering on the bus
+    id: led_yellow
+    pin: GPIO4
+
+interval:
+  - interval: 2s
+    then:
+      - lambda: |-
+          if (id(gea_hub).is_bus_connected()) {
+            id(led_yellow).turn_on();
+          } else {
+            id(led_yellow).turn_off();
+          }
+
+# Value tables: GE's public ERD definitions, plus values seen on a GTD65GBSJ3WS. A value that is not listed shows
+# as its number (for example "0x2A") instead of breaking the entity.
+text_sensor:
+  - platform: gea
+    gea_id: gea_hub
+    id: dl_state
+    name: State
+    erd: 0x2000
+    decode: uint8
+    icon: mdi:tumble-dryer
+    options:
+      0x00: Idle
+      0x01: Standby
+      0x02: Running
+      0x03: Paused
+      0x04: End of Cycle
+      0x05: Delay Run
+      0x06: Delay Run
+      0x07: Delay Pause
+      0x09: Commissioning
+      0x80: Clean Speak
+  - platform: gea
+    gea_id: gea_hub
+    id: dl_phase
+    name: Phase
+    erd: 0x2001
+    decode: uint8
+    icon: mdi:progress-clock
+    options:
+      0x00: Not Running
+      0x09: Tumble
+      0x0A: Load Sensing
+      0x80: Drying
+      0x81: Mist Steam
+      0x82: Cool Down
+      0x83: Extended Tumble
+      0x84: Damp
+      0x85: Air Fluff
+      0x86: Sensing
+      0x88: Wrinkle Free
+      0x89: Preparing
+      0x8A: Steaming
+      0x8B: Sanitizing
+      0x8D: Load Sensing
+  - platform: gea
+    gea_id: gea_hub
+    id: dl_cycle
+    name: Cycle
+    erd: 0x200A
+    decode: uint8
+    icon: mdi:tumble-dryer
+    options:
+      0x00: Not Selected
+      0x04: Bulky
+      0x05: Sanitize
+      0x06: Towels
+      0x08: Normal
+      0x0B: Jeans
+      0x0D: Delicates
+      0x0E: Speed Wash
+      0x0F: Heavy Duty
+      0x1C: Normal
+      0x20: Towels
+      0x2D: Sheets
+      0x80: Cottons
+      0x81: Easy Care
+      0x82: Active Wear
+      0x83: Timed Dry
+      0x84: Dewrinkle
+      0x85: Air Fluff
+      0x86: Steam Refresh
+      0x87: Steam Dewrinkle
+      0x88: Quick Dry
+      0x89: Mixed Load
+      0x8A: Quick Dry
+      0x8B: Casuals
+      0x8C: Warm Up
+      0x8D: Energy Saver
+      0x8E: Antibacterial
+      0x8F: Rack Dry
+      0x90: Baby Care
+      0x91: Auto Dry
+      0x92: Auto Extra Dry
+      0x93: Perm Press
+      0x95: Auto Damp Dry
+      0xFE: Remote Selection
+  - platform: gea
+    gea_id: gea_hub
+    id: dl_cycle_type
+    name: Cycle Type
+    erd: 0x201C
+    decode: uint8
+    icon: mdi:water-percent
+    options:
+      0x00: Sensor Dry
+      0x01: Timed Dry
+      0x02: Mist Steam
+  - platform: gea
+    gea_id: gea_hub
+    id: dl_dryness
+    name: Dryness Level
+    erd: 0x204D
+    decode: uint8
+    icon: mdi:water-opacity
+    options:
+      0x00: "Off"
+      0x01: Damp
+      0x02: Less Dry
+      0x03: Dry
+      0x04: More Dry
+      0x05: Extra Dry
+  - platform: gea
+    gea_id: gea_hub
+    id: dl_heat
+    name: Heat Level
+    erd: 0x2050
+    decode: uint8
+    icon: mdi:thermometer
+    options:
+      0x00: "Off"
+      0x01: No Heat
+      0x02: Extra Low
+      0x03: Low
+      0x04: Medium
+      0x05: High
+  - platform: gea
+    gea_id: gea_hub
+    id: dl_model
+    name: Model
+    erd: 0x0001
+    decode: ascii
+    entity_category: diagnostic
+  - platform: gea
+    gea_id: gea_hub
+    id: dl_serial
+    name: Serial Number
+    erd: 0x0002
+    decode: ascii
+    entity_category: diagnostic
+  - platform: template
+    name: Bus Address
+    entity_category: diagnostic
+    icon: mdi:map-marker
+    update_interval: 60s
+    lambda: |-
+      if (!id(gea_hub).is_address_resolved()) return {"unresolved"};
+      char buf[8];
+      snprintf(buf, sizeof(buf), "0x%02X", id(gea_hub).get_dest_address());
+      return {std::string(buf)};
+  - platform: wifi_info
+    ip_address:
+      name: IP Address
+      entity_category: diagnostic
+
+sensor:
+  - platform: gea
+    gea_id: gea_hub
+    id: dl_remaining
+    name: Remaining Time
+    erd: 0x2007
+    decode: uint16_be
+    multiplier: 0.0166667      # seconds -> minutes
+    accuracy_decimals: 0
+    unit_of_measurement: min
+    device_class: duration
+    state_class: measurement
+    icon: mdi:timer-outline
+  - platform: gea
+    gea_id: gea_hub
+    id: dl_delay
+    name: Delay Remaining
+    erd: 0x2010
+    decode: uint16_be
+    accuracy_decimals: 0
+    unit_of_measurement: min
+    device_class: duration
+    icon: mdi:timer-sand
+  - platform: gea
+    gea_id: gea_hub
+    id: dl_cycles
+    name: Cycles Run
+    erd: 0x2003                # GE's older dryers; not in GE's current public definitions
+    decode: uint16_be
+    accuracy_decimals: 0
+    state_class: total_increasing
+    icon: mdi:counter
+  - platform: wifi_signal
+    name: WiFi Signal
+    update_interval: 60s
+    entity_category: diagnostic
+  - platform: uptime
+    name: Uptime
+    entity_category: diagnostic
+
+binary_sensor:
+  - platform: template
+    name: Bus Connected
+    entity_category: diagnostic
+    device_class: connectivity
+    lambda: 'return id(gea_hub).is_bus_connected();'
+  - platform: gea
+    gea_id: gea_hub
+    id: dl_door
+    name: Door
+    erd: 0x2012
+    bitmask: 0x01           # 1 = closed
+    inverted: true          # door class: on = open
+    device_class: door
+  - platform: gea
+    gea_id: gea_hub
+    id: dl_complete
+    name: Cycle Complete
+    erd: 0x2002
+    bitmask: 0x01
+    icon: mdi:check-circle-outline
+  - platform: gea
+    gea_id: gea_hub
+    id: dl_damp
+    name: Damp Alert           # 1 = clothes have reached "damp"
+    erd: 0x2047
+    bitmask: 0x01
+    icon: mdi:water-alert-outline
+  - platform: gea
+    gea_id: gea_hub
+    id: dl_vent
+    name: Blocked Vent
+    erd: 0x206F
+    bitmask: 0x01
+    device_class: problem
+
+button:
+  - platform: restart
+    name: Restart
+    entity_category: diagnostic
+  - platform: gea
+    gea_id: gea_hub
+    id: dl_stop
+    name: Stop
+    erd: 0x2040             # ends a running, paused or delayed cycle
+    payload: [0x00]
+    icon: mdi:stop
+
+switch:
+  - platform: gea
+    gea_id: gea_hub
+    id: dl_extended_tumble
+    name: Extended Tumble
+    erd: 0x201B
+    icon: mdi:rotate-3d-variant
+  - platform: gea
+    gea_id: gea_hub
+    id: dl_wrinkle_care
+    name: Extended Tumble Option
+    erd: 0x2053                # what is selected
+    write_erd: 0x2051          # where a change is requested
+    icon: mdi:rotate-3d-variant

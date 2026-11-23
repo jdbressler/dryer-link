@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Dryer Link setup</title>
+<style>
+:root{--bg:#f3f4f7;--card:#fff;--ink:#12151a;--mute:#667085;--line:#e4e7ec;--acc:#2f6bff;--acc2:#6ea0ff;--on-acc:#fff;--ok:#12a150;--warn:#c77700;--bad:#d92d20;--soft:#eef3ff;--shadow:0 10px 30px rgba(16,24,40,.08)}
+@media (prefers-color-scheme:dark){:root{--bg:#0a0c10;--card:#14171d;--ink:#f2f4f7;--mute:#98a2b3;--line:#252a33;--acc:#6b9bff;--acc2:#3d6fe0;--on-acc:#071022;--ok:#3ddc84;--warn:#ffb547;--bad:#ff6b5e;--soft:#18203a;--shadow:0 10px 30px rgba(0,0,0,.45)}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}
+.wrap{max-width:460px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;padding:max(14px,env(safe-area-inset-top)) 16px max(18px,env(safe-area-inset-bottom))}
+.top{display:flex;align-items:center;gap:10px;padding:4px 2px 12px}
+.logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--acc),var(--acc2));display:grid;place-items:center;flex:none}
+.logo svg{width:18px;height:18px}
+.brand{font-weight:700;letter-spacing:.2px}
+.steps{margin-left:auto;display:flex;gap:5px}
+.steps i{width:22px;height:5px;border-radius:9px;background:var(--line);transition:background .4s}
+.steps i.on{background:var(--acc)}
+.card{background:var(--card);border-radius:24px;box-shadow:var(--shadow);padding:24px 20px 20px;flex:1;display:flex;flex-direction:column;animation:in .35s ease both}
+@keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.art{display:grid;place-items:center;margin:4px 0 14px;min-height:170px}
+.art svg{width:min(62%,220px);height:auto;overflow:visible}
+h1{font-size:25px;line-height:1.2;margin:0 0 8px;letter-spacing:-.2px}
+p{margin:0 0 12px;color:var(--mute)}
+p.lead{font-size:17px}
+b{color:var(--ink)}
+.grow{flex:1}
+.btn{appearance:none;border:0;width:100%;min-height:54px;border-radius:16px;font-family:inherit;font-weight:600;font-size:17px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .08s,opacity .2s}
+.btn:active{transform:scale(.98)}
+.btn.pri{background:var(--acc);color:var(--on-acc)}
+.btn.sec{background:var(--soft);color:var(--acc)}
+.btn.txt{background:none;color:var(--mute);min-height:44px;font-weight:500;font-size:15px}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.stack{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.need{list-style:none;padding:0;margin:6px 0 0;display:flex;flex-direction:column;gap:10px}
+.need li{display:flex;gap:12px;align-items:center;color:var(--ink)}
+.dot{width:36px;height:36px;border-radius:12px;background:var(--soft);display:grid;place-items:center;flex:none;color:var(--acc)}
+.dot svg{width:20px;height:20px}
+.pill{display:inline-flex;align-items:center;gap:6px;background:var(--soft);color:var(--ink);border-radius:999px;padding:7px 12px;font-size:14px;font-weight:500}
+.pill.ok{color:var(--ok)}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin:4px 0 6px}
+.box{border:1px solid var(--line);border-radius:16px;padding:13px 14px;margin:6px 0}
+.box h3{margin:0 0 4px;font-size:15px}
+.box p{margin:0;font-size:14.5px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14.5px;margin:0}
+.kv dt{color:var(--mute)}.kv dd{margin:0;text-align:right;font-weight:600;word-break:break-all}
+.ring{position:relative;width:170px;height:170px}
+.ring svg{width:170px;height:170px;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:12;stroke-linecap:round}
+.ring .bg{stroke:var(--line)}.ring .fg{stroke:var(--acc);transition:stroke-dashoffset .6s ease}
+.ring .mid{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+.ring .pct{font-size:34px;font-weight:700;letter-spacing:-1px}
+.ring small{display:block;color:var(--mute);font-size:13px;margin-top:-2px}
+.status{min-height:24px;text-align:center;color:var(--ink);font-weight:500}
+.pulse{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+.wave{transform-origin:center;animation:wave 1.8s ease-out infinite}
+.wave.w2{animation-delay:.6s}
+@keyframes wave{0%{opacity:0;transform:scale(.6)}30%{opacity:.9}100%{opacity:0;transform:scale(1.25)}}
+.door{transform-origin:62px 113px;transition:transform .7s cubic-bezier(.2,.8,.2,1)}
+.open .door{transform:scaleX(.3) skewY(-12deg)}
+.tick{stroke-dasharray:60;stroke-dashoffset:60;animation:tick .5s .1s ease forwards}
+@keyframes tick{to{stroke-dashoffset:0}}
+.nets{list-style:none;margin:6px -6px 0;padding:0;max-height:46dvh;overflow:auto}
+.nets li{display:flex;align-items:center;gap:12px;padding:13px 10px;border-radius:14px;cursor:pointer}
+.nets li:active{background:var(--soft)}
+.nets .n{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nets svg{width:20px;height:20px;color:var(--mute);flex:none}
+.field{position:relative;margin:8px 0 4px}
+.field input{width:100%;height:56px;border-radius:16px;border:1.5px solid var(--line);background:transparent;color:var(--ink);font-family:inherit;font-weight:500;font-size:17px;padding:0 76px 0 16px;outline:none}
+.field input:focus{border-color:var(--acc)}
+.field button{position:absolute;right:8px;top:8px;height:40px;padding:0 12px;border:0;border-radius:11px;background:var(--soft);color:var(--acc);font-family:inherit;font-weight:600;font-size:14px}
+.next{counter-reset:n;list-style:none;padding:0;margin:6px 0 0;display:flex;flex-direction:column;gap:12px}
+.next li{counter-increment:n;display:flex;gap:12px;color:var(--ink)}
+.next li:before{content:counter(n);width:26px;height:26px;border-radius:50%;background:var(--acc);color:var(--on-acc);font-weight:700;font-size:14px;display:grid;place-items:center;flex:none;margin-top:1px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;background:var(--soft);border-radius:8px;padding:2px 7px;color:var(--ink);white-space:nowrap;display:inline-block}
+.warn{color:var(--warn)}.bad{color:var(--bad)}.okc{color:var(--ok)}
+.foot{display:flex;justify-content:center;gap:16px;padding:12px 0 0;font-size:13.5px}
+.foot a{color:var(--mute);text-decoration:none}
+.banner{position:fixed;left:12px;right:12px;top:max(10px,env(safe-area-inset-top));background:var(--bad);color:#fff;border-radius:14px;padding:12px 14px;font-size:14.5px;font-weight:600;box-shadow:var(--shadow);z-index:9;display:none}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;z-index:8}
+.sheet.on{display:flex}
+.sheet>div{background:var(--card);border-radius:24px 24px 0 0;padding:20px 20px max(20px,env(safe-area-inset-bottom));width:100%;max-width:460px;margin:0 auto;max-height:82dvh;overflow:auto}
+.demo{margin-top:12px;border:1px dashed var(--line);border-radius:14px;padding:10px 12px;font-size:13px;color:var(--mute)}
+.demo b{display:block;margin-bottom:6px;color:var(--mute);font-weight:600}
+.demo button{font-family:inherit;font-weight:500;font-size:13px;border:1px solid var(--line);background:none;color:var(--ink);border-radius:999px;padding:6px 10px;margin:0 4px 4px 0}
+.demo button.sel{border-color:var(--acc);color:var(--acc)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="banner" id="banner"></div>
+<div class="wrap">
+  <div class="top">
+    <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><circle cx="12" cy="13" r="4"/><path d="M8 6.5h2"/></svg></div>
+    <div class="brand">Dryer Link</div>
+    <div class="steps" id="steps"></div>
+  </div>
+  <div id="app"></div>
+  <div class="foot"><a href="#" id="help">Having trouble?</a></div>
+  <div id="demo"></div>
+</div>
+<div class="sheet" id="sheet"><div id="sheetBody"></div></div>
+<script>
+"use strict";
+/* Dryer Link setup walkthrough.
+   Served by the module on its own hotspot. With no module behind it (opened as a file, or ?demo), it runs
+   against a simulated dryer so the screens can be reviewed. The module API it expects is listed in realApi(). */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LIVE = false;                       /* the firmware build changes this to true when it embeds the page */
+const DEMO = !LIVE || /[?&]demo/.test(location.search);
+const QUICK_MIN = 2, FULL_MIN = 12;
+
+/* ---------- artwork ---------- */
+const dryer = (extra = '', cls = '') => `<svg viewBox="0 0 200 200" class="${cls}" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="42" y="22" width="116" height="160" rx="14" fill="var(--card)" stroke="var(--ink)" stroke-width="4"/>
+  <path d="M42 56h116" stroke="var(--ink)" stroke-width="4"/>
+  <circle cx="64" cy="39" r="5" fill="var(--acc)"/><path d="M82 39h22M116 39h24" stroke="var(--mute)" stroke-width="4"/>
+  <rect x="62" y="76" width="76" height="74" rx="12" fill="var(--soft)" stroke="var(--ink)" stroke-width="4"/>
+  <g class="door"><rect x="62" y="76" width="76" height="74" rx="12" fill="var(--card)" stroke="var(--ink)" stroke-width="4"/><circle cx="100" cy="113" r="22" stroke="var(--acc)" stroke-width="4"/></g>
+  ${extra}</svg>`;
+const waves = `<g stroke="var(--acc)" stroke-width="4"><path class="wave" d="M168 84a26 26 0 0 1 0 36"/><path class="wave w2" d="M180 72a44 44 0 0 1 0 60"/></g>`;
+const check = `<g><circle cx="150" cy="150" r="26" fill="var(--ok)"/><path class="tick" d="M138 150l9 9 16-18" stroke="#fff" stroke-width="5"/></g>`;
+const cross = `<g><circle cx="150" cy="150" r="26" fill="var(--warn)"/><path d="M150 138v14M150 161v1" stroke="#fff" stroke-width="5"/></g>`;
+const power = `<svg viewBox="0 0 200 200" fill="none" stroke-linecap="round"><circle cx="100" cy="100" r="64" fill="var(--soft)"/><circle cx="100" cy="100" r="64" class="pulse" stroke="var(--acc)" stroke-width="4"/><path d="M100 64v34" stroke="var(--acc)" stroke-width="9"/><path d="M78 78a34 34 0 1 0 44 0" stroke="var(--acc)" stroke-width="9"/></svg>`;
+const ic = {
+  phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>',
+  wifi: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2.5 9a14 14 0 0 1 19 0M5.8 12.6a9.2 9.2 0 0 1 12.4 0M9 16a4.5 4.5 0 0 1 6 0"/><circle cx="12" cy="19.3" r="1" fill="currentColor"/></svg>',
+  near: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="3"/><circle cx="12" cy="13" r="3.5"/></svg>',
+  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>',
+  go: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>'
+};
+const bars = (r) => { const n = r > -55 ? 3 : r > -70 ? 2 : 1; return `<svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-width="2.4"><path d="M2.5 9a14 14 0 0 1 19 0" stroke="${n > 2 ? 'currentColor' : 'var(--line)'}"/><path d="M5.8 12.6a9.2 9.2 0 0 1 12.4 0" stroke="${n > 1 ? 'currentColor' : 'var(--line)'}"/><path d="M9 16a4.5 4.5 0 0 1 6 0" stroke="currentColor"/><circle cx="12" cy="19.3" r="1" fill="currentColor"/></svg>`; };
+
+/* ---------- module API ---------- */
+function realApi() {
+  /* a request that gives up after 4 s: when the setup network closes, some phones leave requests hanging */
+  const get = (u) => { const c = new AbortController(), t = setTimeout(() => c.abort(), 4000); return fetch(u, {cache: 'no-store', signal: c.signal}).finally(() => clearTimeout(t)); };
+  const j = (u) => get(u).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
+  return {
+    status: () => j('/dl/status'),                               // everything the screens need, see sim() for the shape
+    findAgain: () => j('/dl/find'),                              // look for the dryer again
+    learn: (mode) => j('/dl/learn?mode=' + mode),                // mode: quick | full
+    check: (what) => j('/dl/check?what=' + what),                // what: door | power | none (none = skip / stop)
+    networks: () => j('/config.json').then((d) => d.aps || []),  // served by the stock captive portal
+    join: (ssid, psk) => get('/wifisave?ssid=' + encodeURIComponent(ssid) + '&psk=' + encodeURIComponent(psk)),
+    report: () => get('/dl/report').then((r) => r.text())
+  };
+}
+function sim() {
+  const o = {scenario: 'ok'};
+  const d = {name: 'dryer-link-3fa2c4', fw: '0.1.0', hotspot: true, secured: true, login: true, bus: {state: 'searching', lang: '', address: ''}, dryer: {},
+    learn: {state: 'idle', mode: 'quick', done: 0, total: 61, secs_left: 0, can: [], controls: [], skipped: 0, unknown: 0},
+    check: {what: 'none', phase: 'idle'}, live: {state: 'Idle', door: 'closed'}, wifi: {state: 'idle', ssid: ''}};
+  let t0 = Date.now(), lt = 0, ld = 0, ct = 0, wt = 0, gone = false;
+  const tick = () => {
+    const now = Date.now();
+    if (d.bus.state === 'searching' && now - t0 > 2600) {
+      if (o.scenario === 'none') { if (now - t0 > 6000) d.bus.state = 'none'; }
+      else if (o.scenario === 'other') { d.bus = {state: 'unsupported', lang: 'classic', address: '0x2C'}; d.dryer = {type: 'Clothes Washer', model: 'GTW685BSL2WS'}; }
+      else { d.bus = {state: 'found', lang: o.scenario === 'new' ? 'new' : 'classic', address: o.scenario === 'new' ? '0xC0' : '0x2B'};
+        d.dryer = {type: 'Clothes Dryer', model: o.scenario === 'new' ? 'PTD60GBSRWS' : 'GTD65GBSJ3WS', serial: 'AB123456C'}; }
+    }
+    if (d.learn.state === 'running') {
+      const f = Math.min(1, (now - lt) / ld);
+      d.learn.done = Math.round(f * d.learn.total); d.learn.secs_left = Math.round((1 - f) * (d.learn.mode === 'full' ? FULL_MIN : QUICK_MIN) * 60);
+      if (f >= 1) Object.assign(d.learn, {state: 'done', secs_left: 0,
+        can: ['What the dryer is doing', 'Time remaining', 'Selected cycle', 'Door open or closed', 'Cycle finished', 'Delay start', 'Model and serial number'],
+        controls: o.scenario === 'new' ? ['Stop'] : ['Stop', 'Extended Tumble'], skipped: o.scenario === 'new' ? 9 : 14, unknown: d.learn.mode === 'full' ? 4 : 0});
+    }
+    if (d.check.what !== 'none' && ct) {
+      const e = now - ct, nd = o.scenario === 'nodoor' && d.check.what === 'door';
+      if (d.check.phase === 'wait1' && e > (nd ? 9000 : 3200)) { d.check.phase = nd ? 'timeout' : (d.check.what === 'door' ? 'wait2' : 'ok'); ct = now; if (!nd && d.check.what === 'door') d.live.door = 'open'; }
+      else if (d.check.phase === 'wait2' && e > 2800) { d.check.phase = 'ok'; d.live.door = 'closed'; }
+    }
+    if (d.wifi.state === 'connecting' && now - wt > 3200) gone = true;  /* joined: the setup network closes */
+  };
+  setInterval(tick, 200);
+  const later = (v) => new Promise((r) => setTimeout(() => r(v), 150));
+  return {
+    opts: o, restart() { gone = false; t0 = Date.now(); d.bus = {state: 'searching', lang: '', address: ''}; d.dryer = {}; d.learn.state = 'idle'; d.check = {what: 'none', phase: 'idle'}; d.wifi = {state: 'idle', ssid: ''}; },
+    status: () => gone ? Promise.reject(new Error('gone')) : later(JSON.parse(JSON.stringify(d))),
+    findAgain() { t0 = Date.now(); d.bus = {state: 'searching', lang: '', address: ''}; return later({}); },
+    learn(mode) { Object.assign(d.learn, {state: 'running', mode, done: 0, total: mode === 'full' ? 2449 : 61}); lt = Date.now(); ld = mode === 'full' ? 20000 : 9000; return later({}); },
+    check(what) { d.check = {what, phase: what === 'none' ? 'idle' : 'wait1'}; ct = Date.now(); return later({}); },
+    networks: () => new Promise((r) => setTimeout(() => r([{ssid: 'Maple House', rssi: -48, lock: 1}, {ssid: 'Maple House Guest', rssi: -52, lock: 0}, {ssid: 'NETGEAR-5G-2241', rssi: -67, lock: 1}, {ssid: 'Linksys01833', rssi: -74, lock: 1}, {ssid: 'HP-Print-7C-OfficeJet', rssi: -80, lock: 0}]), 1100)),
+    join(ssid) { d.wifi = {state: 'connecting', ssid}; wt = Date.now(); return later({}); },
+    report: () => later('Dryer Link report\nmodule dryer-link-3fa2c4, firmware 0.1.0\nlanguage classic, address 0x2B\nmodel GTD65GBSJ3WS\n0x2000=00 0x2001=00 0x2002=00 0x2007=0258 0x200A=83 ...')
+  };
+}
+const api = DEMO ? sim() : realApi();
+
+/* ---------- walkthrough ---------- */
+const STEPS = ['welcome', 'find', 'learn', 'door', 'power', 'wifi', 'done'];
+const BAR = {welcome: 0, find: 1, learn: 2, door: 3, power: 3, wifi: 4, pass: 4, joining: 4, done: 5};
+let S = {screen: 'welcome', dev: null, net: null, fails: 0, sig: ''};
+const app = $('#app');
+function steps() { $('#steps').innerHTML = [1, 2, 3, 4, 5].map((i) => `<i class="${BAR[S.screen] >= i ? 'on' : ''}"></i>`).join(''); }
+function go(screen, extra) { Object.assign(S, extra || {}, {screen, sig: ''}); steps(); paint(true); window.scrollTo(0, 0); }
+function card(html) { app.innerHTML = `<div class="card">${html}</div>`; }
+const mins = (s) => s > 90 ? 'about ' + Math.round(s / 60) + ' minutes left' : s > 20 ? 'about a minute left' : 'almost done';
+
+const V = {
+  welcome: () => card(`<div class="art">${dryer(waves)}</div>
+    <h1>Let's connect your dryer</h1>
+    <p class="lead">This takes about 5 minutes. I'll walk you through it one step at a time.</p>
+    <ul class="need">
+      <li><span class="dot">${ic.near}</span><span>Stay near the dryer, with this module plugged into it</span></li>
+      <li><span class="dot">${ic.wifi}</span><span>Have your home Wi-Fi password ready</span></li>
+      <li><span class="dot">${ic.phone}</span><span>Keep this page open on your phone</span></li>
+    </ul><div class="grow"></div>
+    <div class="stack"><button class="btn pri" data-go="find">Get started ${ic.go}</button></div>`),
+
+  find: () => {
+    const b = S.dev ? S.dev.bus : {state: 'searching'}, d = (S.dev && S.dev.dryer) || {};
+    if (b.state === 'found') card(`<div class="art">${dryer(check)}</div>
+      <h1>Found your dryer</h1><p class="lead">The module and your dryer are talking to each other.</p>
+      <div class="box"><dl class="kv"><dt>Type</dt><dd>${esc(d.type || 'Dryer')}</dd>${d.model ? `<dt>Model</dt><dd>${esc(d.model)}</dd>` : ''}${d.serial ? `<dt>Serial</dt><dd>${esc(d.serial)}</dd>` : ''}</dl></div>
+      <div class="grow"></div><div class="stack"><button class="btn pri" data-go="learn">Continue ${ic.go}</button></div>`);
+    else if (b.state === 'none') card(`<div class="art">${dryer(cross)}</div>
+      <h1>I can't hear the dryer yet</h1><p class="lead">That's usually a quick fix. Check these three things, then try again.</p>
+      <ol class="next"><li><span>The cable is pushed into the jack on the <b>back of the dryer</b> until it clicks.</span></li>
+      <li><span>The dryer is <b>plugged into the wall</b>.</span></li>
+      <li><span>Press the dryer's <b>Power</b> button once so its display lights up.</span></li></ol>
+      <div class="grow"></div><div class="stack"><button class="btn pri" data-act="again">Try again</button><button class="btn txt" data-act="help">I checked all three</button></div>`);
+    else if (b.state === 'unsupported') card(`<div class="art">${dryer(cross)}</div>
+      <h1>This isn't a dryer I know</h1><p class="lead">The module is talking to something, but it reports itself as <b>${esc(d.type || 'another appliance')}</b>${d.model ? ' (' + esc(d.model) + ')' : ''}.</p>
+      <p>Dryer Link is made for GE clothes dryers. Nothing has been changed on your appliance. If this is a dryer, send us the report so we can add it.</p>
+      <div class="grow"></div><div class="stack"><button class="btn pri" data-act="help">Show the report</button><button class="btn txt" data-act="again">Try again</button></div>`);
+    else card(`<div class="art">${dryer(waves, 'pulse')}</div>
+      <h1>Looking for your dryer…</h1><p class="lead">The module is listening on the cable. This usually takes a few seconds.</p>
+      <div class="grow"></div><p class="status pulse">Listening…</p>`);
+  },
+
+  learn: () => {
+    const L = S.dev.learn, C = 2 * Math.PI * 73;
+    if (L.state === 'idle') card(`<div class="art">${dryer(waves)}</div>
+      <h1>Now I'll learn your dryer</h1>
+      <p class="lead">Dryers differ a little from model to model. I'll check what yours can tell me, so everything shown later is right for it.</p>
+      <p>Nothing on the dryer will start or change. You don't need to do anything.</p><div class="grow"></div>
+      <div class="stack"><button class="btn pri" data-act="quick">Start the quick check · about ${QUICK_MIN} min</button>
+      <button class="btn txt" data-act="fullask">Do a full scan instead · about ${FULL_MIN} min</button></div>`);
+    else if (L.state === 'running') {
+      const f = L.total ? L.done / L.total : 0;
+      const line = f < .15 ? 'Asking the dryer who it is…' : f < .4 ? 'Checking cycle and timer information…' : f < .7 ? 'Checking the door and status signals…' : f < .9 ? 'Checking which buttons it supports…' : 'Finishing up…';
+      if (!$('.ring')) card(`<div class="art"><div class="ring"><svg viewBox="0 0 170 170"><circle class="bg" cx="85" cy="85" r="73"/><circle class="fg" cx="85" cy="85" r="73" stroke-dasharray="${C}" stroke-dashoffset="${C}"/></svg><div class="mid"><div><div class="pct"></div><small></small></div></div></div></div>
+        <h1>${L.mode === 'full' ? 'Full scan in progress' : 'Learning your dryer'}</h1>
+        <p class="lead" id="eta"></p><p class="status" id="line"></p><div class="grow"></div>
+        <p style="font-size:14.5px;text-align:center">${L.mode === 'full' ? 'You can put the phone down. If this page closes, join the module\'s Wi-Fi again and it picks up where it was.' : 'Keep this page open.'}</p>`);
+      $('.fg').style.strokeDashoffset = C * (1 - f); $('.pct').textContent = Math.round(f * 100) + '%';
+      $('.ring small').textContent = L.done + ' of ' + L.total; $('#eta').textContent = mins(L.secs_left).replace(/^a/, 'A'); $('#line').textContent = line;
+    } else card(`<div class="art">${dryer(check)}</div>
+      <h1>Got it</h1><p class="lead">Here's what your dryer can share:</p>
+      <div class="chips">${L.can.map((c) => `<span class="pill">${esc(c)}</span>`).join('')}</div>
+      ${L.controls.length ? `<p style="margin-top:8px">And what you'll be able to do from your phone:</p><div class="chips">${L.controls.map((c) => `<span class="pill ok">${esc(c)}</span>`).join('')}</div>` : ''}
+      <p style="font-size:14.5px">${L.skipped ? (L.skipped === 1 ? '1 thing this model doesn\'t have was' : L.skipped + ' things this model doesn\'t have were') + ' left out, so you\'ll never see empty readings. ' : ''}${L.unknown ? 'I also found ' + L.unknown + (L.unknown === 1 ? ' code' : ' codes') + ' I don\'t use yet; ' + (L.unknown === 1 ? 'it\'s' : 'they\'re') + ' saved in the report.' : ''}</p>
+      <div class="grow"></div><div class="stack"><button class="btn pri" data-act="todoor">Continue ${ic.go}</button></div>`);
+  },
+
+  door: () => checkView('door', {
+    wait1: ['Open the dryer door', 'Just swing it open. I\'m watching for it.', ''], wait2: ['Now close it', 'I saw the door open. Close it again to finish this check.', 'open'],
+    ok: ['Door check passed', 'I can tell when your dryer door is open or closed.', ''],
+    timeout: ['I didn\'t see the door move', 'Some models don\'t report their door. You can try once more, or carry on without it. Everything else will still work.', '']}, 'power'),
+
+  power: () => checkView('power', {
+    wait1: ['Press Power on the dryer', 'Press the dryer\'s Power button once, so its display lights up.', ''],
+    ok: ['Power check passed', 'I can tell when your dryer is awake.', ''],
+    timeout: ['I didn\'t see the dryer wake up', 'That\'s fine on some models. You can try once more, or carry on.', '']}, 'wifi'),
+
+  wifi: () => {
+    card(`<h1>Connect to your Wi-Fi</h1><p class="lead">Choose your home network, so you can see the dryer from anywhere in the house.</p>
+      <ul class="nets" id="nets"><li class="pulse" style="justify-content:center;color:var(--mute)">Looking for networks…</li></ul><div class="grow"></div>
+      <div class="stack"><button class="btn txt" data-act="rescan">Look again</button></div>`);
+    api.networks().then((n) => { if (S.screen !== 'wifi') return; const seen = {};
+      const rows = n.filter((a) => a.ssid && !seen[a.ssid] && (seen[a.ssid] = 1)).sort((a, b) => b.rssi - a.rssi);
+      $('#nets').innerHTML = rows.length ? rows.map((a, i) => `<li data-net="${i}">${bars(a.rssi)}<span class="n">${esc(a.ssid)}</span>${a.lock ? ic.lock : ''}</li>`).join('') : '<li style="color:var(--mute)">No networks found. Move closer to your router and look again.</li>';
+      S.nets = rows; }).catch(() => { $('#nets').innerHTML = '<li style="color:var(--mute)">Couldn\'t get the list. Tap "Look again".</li>'; });
+  },
+
+  pass: () => card(`<h1>${esc(S.net.ssid)}</h1><p class="lead">${S.net.lock ? 'Enter the password for this network.' : 'This network has no password.'}</p>
+    ${S.net.lock ? `<div class="field"><input id="psk" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Wi-Fi password"><button type="button" data-act="eye">Show</button></div>` : ''}
+    <div class="box"><h3>What happens next</h3><p>When you tap Connect, this page will close and your phone will go back to your own Wi-Fi. That's normal. Your next step is on the following screen, so take a screenshot of it.</p></div>
+    <div class="grow"></div><div class="stack"><button class="btn pri" data-act="join">Connect</button><button class="btn txt" data-go="wifi">Choose a different network</button></div>`),
+
+  joining: () => {
+    const w = S.dev.wifi, name = S.dev.name, left = !!S.left, fail = w.state === 'fail' && !left, done = w.state === 'ok' || left;
+    card(`<div class="art">${dryer(fail ? cross : done ? check : waves, done || fail ? '' : 'pulse')}</div>
+      ${fail ? `<h1>That didn't work</h1><p class="lead">The module couldn't join <b>${esc(S.net.ssid)}</b>. The password is the usual reason.</p><div class="grow"></div><div class="stack"><button class="btn pri" data-go="pass">Try the password again</button></div>`
+      : `<h1>${left ? 'That should be it' : w.state === 'ok' ? 'You\'re all set' : 'Joining your Wi-Fi…'}</h1>
+      <p class="lead">${left ? 'I can\'t reach the module on its setup network any more. That normally means it has joined your Wi-Fi and closed it. Here\'s what to do next:' : w.state === 'ok' ? 'Your dryer is connected.' : 'This page may close on its own in a moment. Here\'s what to do next:'}</p>
+      <ol class="next"><li><span>Let your phone go back to <b>${esc(S.net.ssid)}</b>.</span></li>
+      <li><span><b>Using Home Assistant?</b> Open it. A new device named <span class="mono">${esc(name)}</span> is waiting under Settings, Devices. Tap Add.</span></li>
+      <li><span><b>No Home Assistant?</b> Open your browser and go to <span class="mono">http://${esc(name)}.local</span>${S.dev.login ? '. Sign in as <span class="mono">admin</span> with the password on the module\'s label.' : ''}</span></li></ol>
+      ${left ? `<p style="font-size:14.5px;margin-top:12px">To be sure: the green light on the module is on once it has joined. If <span class="mono">${esc(name)}</span> shows up in your phone's Wi-Fi list again, the password didn't work. Join it and try once more.</p>` : ''}
+      <p style="font-size:14.5px;margin-top:12px">Home Assistant can add the module for 30 minutes after the module starts. Later than that, unplug the module's cable for ten seconds and plug it back in first.</p>
+      <div class="grow"></div><p style="font-size:14.5px;text-align:center">Tip: take a screenshot of this page now.</p>`}`);
+  }
+};
+function checkView(what, T, nextScreen) {
+  const c = S.dev.check, ph = c.what === what ? c.phase : 'wait1', t = T[ph] || T.wait1;
+  const art = what === 'power' && ph === 'wait1' ? power : dryer(ph === 'ok' ? check : ph === 'timeout' ? cross : '', (t[2] || (S.dev.live.door === 'open' ? 'open' : '')));
+  card(`<div class="art">${art}</div><h1>${t[0]}</h1><p class="lead">${t[1]}</p><div class="grow"></div>
+    ${ph === 'ok' ? `<div class="stack"><button class="btn pri" data-act="after" data-next="${nextScreen}">Continue ${ic.go}</button></div>`
+    : ph === 'timeout' ? `<div class="stack"><button class="btn pri" data-act="recheck" data-what="${what}">Try once more</button><button class="btn txt" data-act="after" data-next="${nextScreen}">Carry on without it</button></div>`
+    : `<p class="status pulse">Waiting for you…</p><div class="stack"><button class="btn txt" data-act="after" data-next="${nextScreen}">Skip this check</button></div>`}`);
+}
+/* the hands-on checks this dryer can do, in order, then Wi-Fi */
+function nextCheck(after) {
+  const caps = (S.dev && S.dev.caps) || {}, order = ['door', 'power'].filter((c) => caps[c] !== false);
+  return order[after ? order.indexOf(after) + 1 : 0] || 'wifi';
+}
+/* a page that was closed and opened again picks up where the module is */
+function resume(d) {
+  if (d.learn.state === 'running') return 'learn';
+  if (d.learn.state === 'done' && d.bus.state === 'found') return d.wifi.state === 'fail' || d.wifi.state === 'connecting' ? 'wifi' : 'learn';
+  return '';
+}
+/* repaint only when what the screen shows has changed, so animations and typing are never interrupted */
+function paint(force) {
+  const d = S.dev || (S.dev = {name: '', fw: '', bus: {state: 'searching'}, dryer: {}, learn: {state: 'idle'}, check: {what: 'none', phase: 'idle'}, live: {}, wifi: {state: 'idle'}});
+  const sig = {find: () => d.bus.state, learn: () => d.learn.state + (d.learn.state === 'running' ? d.learn.done : ''), door: () => d.check.what + d.check.phase, power: () => d.check.what + d.check.phase, joining: () => d.wifi.state + (S.left ? 'left' : '')}[S.screen];
+  const s = sig ? sig() : '';
+  if (!force && (!sig || s === S.sig)) return;
+  S.sig = s; V[S.screen]();
+}
+async function poll() {
+  try { S.dev = await api.status(); S.fails = 0; S.left = 0; $('#banner').style.display = 'none'; }
+  catch (e) { if (S.screen === 'joining' && S.fails >= 4 && !S.left && S.dev && S.dev.wifi.state === 'connecting') { S.left = 1; paint(); }
+    if (++S.fails >= 4 && S.screen !== 'joining') { const b = $('#banner'); b.textContent = 'Lost the connection to the module. Join its Wi-Fi network again to continue. If that network is gone, unplug the module\'s cable for ten seconds and plug it back in.'; b.style.display = 'block'; } return; }
+  if (!S.resumed) { S.resumed = 1; const r = S.screen === 'welcome' && resume(S.dev); if (r) return go(r); }
+  if (['learn', 'door', 'power'].includes(S.screen) && S.dev.bus.state !== 'found') return go('find');
+  paint();
+}
+document.addEventListener('click', async (e) => {
+  const t = e.target.closest('[data-go],[data-act],[data-net],#help'); if (!t) return;
+  if (t.id === 'help') { e.preventDefault(); return help(); }
+  if (t.dataset.go) return go(t.dataset.go);
+  if (t.dataset.net) return go('pass', {net: S.nets[+t.dataset.net]});
+  const a = t.dataset.act;
+  if (a === 'again') { await api.findAgain(); await poll(); go('find'); }
+  else if (a === 'help') help();
+  else if (a === 'quick') { await api.learn('quick'); await poll(); go('learn'); }
+  else if (a === 'fullask') sheet(`<h1>Full scan</h1><p class="lead">This reads every code the dryer knows, not just the ones Dryer Link uses.</p>
+      <p>It takes <b>about ${FULL_MIN} minutes</b> instead of ${QUICK_MIN}. You only need it if support asked for it, or if you're curious. The result is the same for everyday use.</p>
+      <div class="stack"><button class="btn pri" data-act="full">Start the full scan · about ${FULL_MIN} min</button><button class="btn sec" data-act="quick">Do the quick check instead</button></div>`);
+  else if (a === 'full') { sheet(); await api.learn('full'); await poll(); go('learn'); }
+  else if (a === 'todoor') { const n = nextCheck(''); await api.check(n === 'wifi' ? 'none' : n); await poll(); go(n); }
+  else if (a === 'recheck') { await api.check(t.dataset.what); await poll(); go(t.dataset.what); }
+  else if (a === 'after') { const n = t.dataset.next === 'power' ? nextCheck('door') : 'wifi'; await api.check(n === 'power' ? 'power' : 'none'); await poll(); go(n); }
+  else if (a === 'wifianyway') { sheet(); go('wifi'); }
+  else if (a === 'rescan') go('wifi');
+  else if (a === 'eye') { const i = $('#psk'); i.type = i.type === 'password' ? 'text' : 'password'; t.textContent = i.type === 'password' ? 'Show' : 'Hide'; i.focus(); }
+  else if (a === 'join') { const p = $('#psk'); if (p && p.value.length < 8) { p.focus(); p.style.borderColor = 'var(--bad)'; return; } t.disabled = true; try { await api.join(S.net.ssid, p ? p.value : ''); } catch (x) {} await poll(); go('joining'); }
+  else if (a === 'copy') { const r = await api.report(); try { await navigator.clipboard.writeText(r); t.textContent = 'Copied'; } catch (x) { $('#rep').style.display = 'block'; $('#rep').textContent = r; } }
+  else if (a === 'close') sheet();
+  if (a === 'quick') sheet();
+});
+function sheet(html) { const s = $('#sheet'); if (!html) return s.classList.remove('on'); $('#sheetBody').innerHTML = html; s.classList.add('on'); }
+$('#sheet').addEventListener('click', (e) => { if (e.target.id === 'sheet') sheet(); });
+function help() {
+  const d = S.dev || {}, b = d.bus || {}, y = d.dryer || {};
+  sheet(`<h1>Having trouble?</h1><p>Nothing here can harm your dryer. If something doesn't look right, copy the report below and send it to whoever supplied your Dryer Link.</p>
+    <div class="box"><dl class="kv"><dt>Module</dt><dd>${esc(d.name || '—')}</dd><dt>Software</dt><dd>${esc(d.fw || '—')}</dd><dt>Dryer</dt><dd>${esc(y.model || 'not found yet')}</dd><dt>Connection</dt><dd>${b.lang ? esc(b.lang) + ' · ' + esc(b.address) : '—'}</dd></dl></div>
+    <pre id="rep" class="mono" style="display:none;white-space:pre-wrap;padding:10px"></pre>
+    <div class="stack"><button class="btn sec" data-act="copy">Copy the report</button>${b.state && b.state !== 'found' && ['welcome', 'find'].includes(S.screen) ? '<button class="btn txt" data-act="wifianyway">Connect the module to Wi-Fi anyway</button>' : ''}<button class="btn txt" data-act="close">Close</button></div>`);
+}
+/* preview controls: only when no module is behind the page */
+if (DEMO) {
+  const sc = {ok: 'Dryer like mine', new: 'Newer-language dryer', none: 'Nothing answers', other: 'Not a dryer', nodoor: 'Door not reported'};
+  const draw = () => { $('#demo').innerHTML = `<div class="demo"><b>Preview only · pretend dryer</b>${Object.keys(sc).map((k) => `<button data-sc="${k}" class="${api.opts.scenario === k ? 'sel' : ''}">${sc[k]}</button>`).join('')}<button data-sc="restart">Start over</button><div>Waits are shortened here. On a real dryer the quick check takes about ${QUICK_MIN} minutes and the full scan about ${FULL_MIN}.</div></div>`; };
+  $('#demo').addEventListener('click', (e) => { const k = e.target.dataset.sc; if (!k) return; if (k !== 'restart') api.opts.scenario = k; api.restart(); draw(); go('welcome'); });
+  draw();
+}
+steps(); paint(true); poll(); setInterval(poll, 600);
+</script>
+</body>
+</html>

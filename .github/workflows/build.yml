@@ -1,0 +1,104 @@
+name: Build
+
+# Every push runs the tests. Nothing is published by a push.
+#
+# Publishing is started by hand: Actions tab, "Build", "Run workflow", and type the version that is in
+# dryer-link.yaml. That builds the firmware, puts it at the update address (GitHub Pages) and makes a GitHub
+# release. From then on every module in the field installs it by itself, so type the version only when the
+# firmware has been tried on a module.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish to every module: type the version from dryer-link.yaml (like 0.1.0). Empty: tests only."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: The simulator tests the feature list the firmware has
+        run: python3 tools/check_features.py
+      - name: Build the simulator
+        run: tests/host/build.sh
+      - name: Scenarios against pretend dryers
+        run: SIM_QUIET=1 tests/host/build/sim --test
+      - name: Flash tool and label format
+        run: python3 tests/tools/test_flash_module.py
+
+  publish:
+    needs: test
+    if: github.event_name == 'workflow_dispatch' && inputs.publish != '' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    concurrency:
+      group: publish
+      cancel-in-progress: false
+    permissions:
+      contents: write  # the release and its tag
+      pages: write     # the update address
+      id-token: write  # asked for by the Pages deployment
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: The version typed is the version in dryer-link.yaml, and it is new
+        id: version
+        env:
+          TYPED: ${{ inputs.publish }}
+        run: |
+          V="$(python3 tools/release.py version)"
+          if [ "$TYPED" != "$V" ]; then
+            echo "::error::You typed '$TYPED', but dryer-link.yaml says $V."
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/v$V" > /dev/null; then
+            echo "::error::v$V has been published already. Raise the version in dryer-link.yaml first."
+            exit 1
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Install ESPHome
+        run: pip install esphome==2026.10.2
+      - name: Build the firmware
+        run: esphome compile dryer-link.yaml
+      - name: Check the firmware and lay out the update address
+        env:
+          V: ${{ steps.version.outputs.version }}
+        run: |
+          python3 tools/release.py site .esphome/build/dryer-link site --repo "$GITHUB_REPOSITORY"
+          cp .esphome/build/dryer-link/build/firmware.factory.bin "dryer-link-$V.factory.bin"
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+      - name: Put it at the update address
+        id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+      - name: Fetch it back the way a module does, from the address the firmware has
+        env:
+          V: ${{ steps.version.outputs.version }}
+        run: python3 tools/release.py verify --version "$V" --wait 300
+      - name: GitHub release
+        env:
+          V: ${{ steps.version.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v$V" --target "$GITHUB_SHA" --title "Dryer Link $V" \
+            --notes "Modules install this version by themselves. The .ota.bin is what they fetch. The .factory.bin is for a first flash through the adapter; use flash.sh for that, which also gives the module its setup password." \
+            "site/firmware/dryer-link-$V.ota.bin" "dryer-link-$V.factory.bin" site/firmware/manifest.json
