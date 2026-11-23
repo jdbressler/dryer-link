@@ -152,7 +152,9 @@ What is protected, and by what:
   in. GitHub's release downloads were not used because they redirect to long signed addresses, which ESPHome's HTTP
   client needs larger buffers for; ESPHome's documentation recommends Pages for this.
 - The firmware trusts the full list of certificate authorities, not ESPHome's shorter default list, so that a change
-  of authority at GitHub cannot cut modules off.
+  of authority at GitHub cannot cut modules off. Checked 2026-11-22: the update address presents a Let's Encrypt
+  certificate that chains to ISRG Root X1, which is on the list. The list is as old as the firmware, so publish a
+  build on a current ESPHome at least once a year even if nothing else has changed.
 - Known limit: a version that starts, runs for a minute, and then cannot reach Wi-Fi or the update address is not
   rolled back and cannot be replaced over the network. Try every release on a module before publishing it.
 - Known limit: the update address is fixed in every module. See README, "Publishing a release".
