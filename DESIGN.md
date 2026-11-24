@@ -1,6 +1,6 @@
 # Dryer Link: design record
 
-Status 2026-11-22: firmware 0.1.0 written. It compiles with ESPHome 2026.10.2 and passes its tests on a computer.
+Status 2026-11-23: firmware 0.1.1 written (0.1.0 plus the module's health readings). It compiles with ESPHome 2026.10.2 and passes its tests on a computer.
 It has not yet run on a module or against a real dryer. "Dryer Link" is a placeholder name.
 
 ## Decisions (made by the owner)
@@ -12,6 +12,8 @@ It has not yet run on a module or against a real dryer. "Dryer Link" is a placeh
 - Source in a public GitHub repository (`jdbressler/dryer-link`, MIT, (c) Snow Wood Tech); modules update themselves
   from its releases.
 - Secure and easy to use.
+- The module reports its own health, locally and only to its owner. No check-in, no fleet view: the maker does not
+  learn the status of anyone's module.
 
 ## How it works
 
@@ -136,6 +138,23 @@ What is protected, and by what:
 - **Adoption window.** For 30 minutes after a start, anyone on the home network who speaks ESPHome's API can adopt
   an unadopted module. That is ESPHome's provisioning model; the window is the protection.
 - The test build is open on purpose (see README). It must not be installed for a customer.
+
+## Health readings and what leaves the home
+
+Diagnostic entities, no new code: ESPHome's `internal_temperature` (the chip's sensor; the driver switches range by
+itself and covers -40 to 125 °C), `debug` (last restart reason, free memory, longest main-loop pass), and two
+counters the bus component already kept, `get_crc_errors()` and `get_dropped_requests()`. Scan questions that go
+unanswered during learning are not counted as "unanswered"; only polls and commands are. The counters start at zero
+at every restart. They are not part of the feature list: they describe the module, not the dryer, so they are never
+hidden.
+
+No alarm thresholds are built in, because nothing has been measured on a real module yet. Not measurable on this
+board: the supply voltage (IO0 and IO1, the free pins that could measure it, are not connected).
+
+What a module sends beyond the home network, checked in ESPHome 2026.10.2's source: one thing, the update check. It
+is an HTTPS GET of the manifest, and of the firmware when one is installed, with ESPHome's generic `User-Agent` and
+no other headers, cookies, parameters or body. There is no time server, no MQTT, no cloud API. Home Assistant
+connects to the module, not the other way round. GitHub Pages gives a repository's owner no request logs.
 
 ## Updates
 

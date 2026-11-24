@@ -6,7 +6,7 @@ Firmware that connects a GE clothes dryer to Home Assistant, for dryers it has n
 It runs on the OnionStraws Rev 2.2 "mod1" adapter (the open-hardware mulcmu board with an ESP32-C3-WROOM-02), which
 plugs into the RJ45 service port on the back of the dryer and is powered from it.
 
-**Status, 2026-11-22: version 0.1.0 compiles and passes its tests on a computer. It has not yet run on a module.**
+**Status, 2026-11-23: version 0.1.1 compiles and passes its tests on a computer. It has not yet run on a module.**
 See "What is tested" below.
 
 ## What it does
@@ -24,6 +24,7 @@ See "What is tested" below.
    Without Home Assistant, the module serves a status page at `http://dryer-link-xxxxxx.local`
    (user `admin`, password from the label).
 5. The module keeps itself up to date: it fetches new releases of this repository by itself.
+6. It reports its own health to its owner, and to nobody else (see "Health of the module").
 
 It never sends a start command. What it can write is listed under "What it writes to the dryer".
 
@@ -45,6 +46,33 @@ It never sends a start command. What it can write is listed under "What it write
 - **Full reset.** Unplug and replug the module five times, each within ten seconds of the last. It forgets its Wi-Fi
   and what it learned. It keeps its password.
 - **Moved to another dryer?** The module notices the different model, learns it again on its own and restarts once.
+
+## Health of the module
+
+These show up under "Diagnostic" on the module's page in Home Assistant, and on the module's status page.
+
+| Reading | What it means |
+|---------|---------------|
+| Module Temperature | The chip's own sensor, -40 to 125 °C. It reads the chip, which runs warmer than the air around it and is not the hottest part on the board. Good for a trend and an alarm threshold, not as a precise thermometer. |
+| Last Restart Reason | `power-on event` is normal. `brownout` means the supply sagged (cable, connector, the dryer's supply, the regulator). `exception/panic` or a watchdog means the firmware crashed. A software restart names what asked for it. |
+| Uptime | Drops to zero at every restart; frequent drops are restarts nobody asked for. |
+| Free Memory | Should settle and stay level. Falling steadily over days is a leak. |
+| Loop Time | The longest pass of the main loop in the last minute. Rising means the module is struggling. |
+| Bus Checksum Errors | Damaged messages on the dryer cable since the last restart. The bus is shared with the dryer's own traffic, so an occasional one is expected; a rising rate points at the cable, the connector or the bus chips. |
+| Bus Requests Unanswered | Questions the dryer never answered, after repeats, since the last restart. |
+| Bus Connected, WiFi Signal | Whether the dryer is answering, and how strong the Wi-Fi is at the dryer. |
+
+What normal looks like on a real module has not been measured yet, so no alarm values are built in. The simplest
+alarm needs none: a Home Assistant automation that notifies when the module has been unavailable for 15 minutes.
+
+The board cannot measure its supply voltage (nothing connects the supply to a measuring pin; IO0 and IO1 are free
+for that in a later board revision). Sagging power shows up only as `brownout` restarts.
+
+**Nothing about a module leaves the home.** All of the above goes to the owner's Home Assistant, over its encrypted
+local connection, and to the module's own status page. There is no account, no cloud service and no check-in. The
+one connection a module makes to the internet is the update check: a plain download from this repository's GitHub
+Pages that carries no module name, no serial number and no readings. GitHub's servers see the home's public address,
+as any website does; the repository's owner gets no record of it.
 
 ## Security
 
@@ -126,6 +154,10 @@ does, and makes a GitHub release. The approval in step 4 is there because a push
 publish: the repository's `github-pages` environment only deploys after the account owner approves. Modules check the address shortly after start-up and every 4 hours, and
 install a version that differs from their own when the dryer is quiet. A release that fails to install is retried
 after 5 minutes, then 20, then 80, and so on up to once a day.
+
+**A module runs whatever version the update address offers.** A module flashed with a version that has not been
+published (newer or older) replaces itself with the published one. So publish before flashing the release build, or
+use the test build, which never installs by itself.
 
 **The update address is built into every module.** If the repository or the account is renamed, modules in the
 field stop finding updates. Before many modules are out, consider serving the manifest from a domain of your own.

@@ -13,6 +13,9 @@
 #   - Home Assistant assigns its own encryption key when it adopts the module.
 #   - Updates: the module checks this project's release address over HTTPS and installs a different version by
 #     itself when the dryer is not running. Nothing can push firmware to it over the network.
+#   - Nothing about the module or the dryer leaves the home. Everything it reports, including its own health
+#     (temperature, restarts, memory, bus errors), goes to the owner's Home Assistant and its own status page.
+#     The update check is a plain download: it carries no module name and no readings.
 #   - Setup window: 30 minutes after power-up. If the module has not been set up by then, the hotspot closes
 #     until the module is unplugged and plugged back in.
 #   - Full reset: unplug and replug the module 5 times, each time within 10 seconds of the last.
@@ -21,7 +24,7 @@
 #
 # LEDs: green = on Wi-Fi, yellow = dryer answering on the bus, red = unused.
 substitutions:
-  version: "0.1.0"             # a release is this version, tagged "v" + this, built by .github/workflows
+  version: "0.1.1"             # a release is this version, tagged "v" + this, built by .github/workflows
   # Where modules look for updates. Served by GitHub Pages from this repository, written by the release workflow.
   update_manifest: https://jdbressler.github.io/dryer-link/firmware/manifest.json
 
@@ -56,6 +59,11 @@ esp32:
 logger:
   baud_rate: 0
   level: INFO
+
+# Health of the module itself: why it last restarted, free memory, how long the main loop takes.
+# See "sensor:" and "text_sensor:" below for what is shown, and README, "Health of the module", for how to read it.
+debug:
+  update_interval: 60s
 
 # No key here: Home Assistant sets one the first time it adopts the module.
 api:
@@ -394,6 +402,9 @@ text_sensor:
     ip_address:
       name: IP Address
       entity_category: diagnostic
+  - platform: debug
+    reset_reason:
+      name: Last Restart Reason   # "brownout": the power sagged. "exception/panic" or a watchdog: the firmware crashed.
 
 sensor:
   - platform: gea
@@ -434,6 +445,31 @@ sensor:
   - platform: uptime
     name: Uptime
     entity_category: diagnostic
+  # ---- health of the module (all diagnostic, all local) ----
+  - platform: internal_temperature
+    name: Module Temperature      # the chip's own sensor: good for a trend and a threshold, not a precise thermometer
+    update_interval: 60s
+  - platform: debug
+    free:
+      name: Free Memory           # falling steadily over days = a leak
+    loop_time:
+      name: Loop Time             # the longest pass of the main loop in the last minute
+  - platform: template
+    name: Bus Checksum Errors     # damaged messages on the dryer cable since the last restart
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    state_class: total_increasing
+    icon: mdi:alert-circle-outline
+    update_interval: 60s
+    lambda: 'return id(gea_hub).get_crc_errors();'
+  - platform: template
+    name: Bus Requests Unanswered # questions the dryer never answered, after repeats, since the last restart
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    state_class: total_increasing
+    icon: mdi:help-circle-outline
+    update_interval: 60s
+    lambda: 'return id(gea_hub).get_dropped_requests();'
 
 binary_sensor:
   - platform: template
